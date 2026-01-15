@@ -154,14 +154,23 @@ mkdir -p "$MOUNT_POINT"
 
 # Try to mount with various filesystem types
 MOUNTED=false
-for FS in ntfs exfat vfat ext4; do
-    if mount -t "$FS" "$DEVICE" "$MOUNT_POINT" 2>/dev/null; then
-        MOUNTED=true
-        FILESYSTEM="$FS"
-        log "Mounted as $FS"
-        break
-    fi
-done
+
+# First, try auto-detect (works best for exFAT on most systems)
+if mount "$DEVICE" "$MOUNT_POINT" 2>/dev/null; then
+    MOUNTED=true
+    FILESYSTEM=$(findmnt -n -o FSTYPE "$MOUNT_POINT" 2>/dev/null || echo "auto")
+    log "Mounted as $FILESYSTEM (auto-detected)"
+else
+    # If auto-detect fails, try explicit filesystem types
+    for FS in ntfs exfat vfat ext4; do
+        if mount -t "$FS" "$DEVICE" "$MOUNT_POINT" 2>/dev/null; then
+            MOUNTED=true
+            FILESYSTEM="$FS"
+            log "Mounted as $FS"
+            break
+        fi
+    done
+fi
 
 if [ "$MOUNTED" = false ]; then
     error "Failed to mount device $DEVICE"
