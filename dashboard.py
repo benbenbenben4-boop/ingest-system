@@ -288,12 +288,28 @@ def control_stop():
 def control_delete_folder():
     data = request.get_json()
     folder = data.get('folder')
-    
+
     if not folder:
         return jsonify({'error': 'Folder name required'}), 400
-    
+
     result = subprocess.run([CONTROL_SCRIPT, 'delete-folder', folder], capture_output=True, text=True)
-    
+
+    return jsonify({
+        'success': result.returncode == 0,
+        'message': result.stdout.strip()
+    })
+
+@app.route('/api/control/unmount-device', methods=['POST'])
+@auth.login_required
+def control_unmount_device():
+    data = request.get_json()
+    device = data.get('device')
+
+    if not device:
+        return jsonify({'error': 'Device required'}), 400
+
+    result = subprocess.run([CONTROL_SCRIPT, 'unmount-device', device], capture_output=True, text=True)
+
     return jsonify({
         'success': result.returncode == 0,
         'message': result.stdout.strip()

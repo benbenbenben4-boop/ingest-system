@@ -141,11 +141,20 @@
             background: #10b981;
             color: white;
         }
-        
+
         .btn-success:hover {
             background: #059669;
         }
-        
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -503,8 +512,9 @@
                         <option value="">Select USB Drive...</option>
                     </select>
                     <button class="btn btn-success" onclick="startManualScan()">Start Scan</button>
+                    <button class="btn btn-warning" onclick="unmountDevice()">Unmount Drive</button>
                 </div>
-                
+
                 <button class="btn btn-danger" onclick="stopIngest()" id="stopBtn">Stop Transfer</button>
             </div>
             
@@ -673,7 +683,7 @@
             if (!confirm('Are you sure you want to stop the current transfer?')) {
                 return;
             }
-            
+
             fetch('/api/control/stop', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'}
@@ -691,7 +701,40 @@
                 showNotification('Error stopping transfer', 'error');
             });
         }
-        
+
+        // Unmount device
+        function unmountDevice() {
+            const device = document.getElementById('deviceSelect').value;
+            if (!device) {
+                showNotification('Please select a device to unmount', 'error');
+                return;
+            }
+
+            if (!confirm(`Safely unmount ${device}? Make sure no ingest is in progress.`)) {
+                return;
+            }
+
+            fetch('/api/control/unmount-device', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({device: device})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message || 'Device unmounted successfully', 'success');
+                    // Refresh device list after unmount
+                    setTimeout(updateDeviceList, 1000);
+                } else {
+                    showNotification(data.message || 'Failed to unmount device', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error unmounting device', 'error');
+            });
+        }
+
         // Delete folder
         function deleteFolder(folder) {
             if (!confirm(`Are you sure you want to delete folder "${folder}"? This cannot be undone.`)) {

@@ -63,8 +63,24 @@ case "$1" in
         # List all connected USB storage devices
         lsblk -o NAME,SIZE,LABEL,FSTYPE,MOUNTPOINT | grep -E "sd[a-z]"
         ;;
+    unmount-device)
+        DEVICE="$2"
+        if [ -z "$DEVICE" ]; then
+            echo "Error: Device required"
+            exit 1
+        fi
+        # Check if device is mounted
+        if mount | grep -q "$DEVICE"; then
+            # Unmount the device
+            umount "$DEVICE" 2>/dev/null || umount -l "$DEVICE"
+            sync
+            echo "Safely unmounted: $DEVICE"
+        else
+            echo "Device not mounted: $DEVICE"
+        fi
+        ;;
     *)
-        echo "Usage: $0 {enable-auto|disable-auto|status-auto|manual-scan DEVICE|stop|delete-folder FOLDER|list-devices}"
+        echo "Usage: $0 {enable-auto|disable-auto|status-auto|manual-scan DEVICE|stop|delete-folder FOLDER|list-devices|unmount-device DEVICE}"
         exit 1
         ;;
 esac
