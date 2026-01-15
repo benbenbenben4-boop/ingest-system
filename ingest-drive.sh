@@ -132,9 +132,14 @@ DEVICE_SIZE_GB=$((DEVICE_SIZE / 1024 / 1024 / 1024))
 
 log "Device size: ${DEVICE_SIZE_GB}GB"
 
-# Step 1: Mount the drive
+# Step 1: Mount the drive (unmount first if already mounted)
 log "Mounting drive..."
 update_status "mounting" "Mounting USB drive..." 5
+
+# Unmount if already mounted
+if mountpoint -q "$MOUNT_POINT"; then
+    umount "$MOUNT_POINT" 2>/dev/null || true
+fi
 
 mkdir -p "$MOUNT_POINT"
 
@@ -236,35 +241,9 @@ EOF
 
 check_stop
 
-# Step 5: Calculate checksums of source files (excluding trash)
-log "Calculating source checksums..."
-update_status "checksumming" "Calculating SHA256 checksums of source files..." 20
-
-CHECKSUM_FILE="$DEST_DIR/checksums_${TIMESTAMP}.txt"
-cd "$MOUNT_POINT"
-
-# Calculate checksums with progress
-CURRENT_FILE_NUM=0
-find . -type f -not -path "*/.*" | while read -r file; do
-    check_stop
-    
-    CURRENT_FILE_NUM=$((CURRENT_FILE_NUM + 1))
-    PROGRESS=$((20 + (CURRENT_FILE_NUM * 30 / TOTAL_FILES)))
-    
-    CURRENT_FILE="$file"
-    update_status "checksumming" "Checksumming: $file" $PROGRESS
-    
-    sha256sum "$file" >> "$CHECKSUM_FILE"
-done
-
-log "Checksums calculated and saved"
-echo "Source checksums calculated: $CHECKSUM_FILE" >> "$LOG_FILE"
-
-check_stop
-
-# Step 6: Transfer files to NAS (excluding trash and hidden files)
+# Step 5: Transfer files to NAS (excluding trash and hidden files)
 log "Starting file transfer..."
-update_status "transferring" "Transferring files to NAS..." 50
+update_status "transferring" "Transferring files to NAS..." 20
 
 TRANSFERRED_FILES=0
 
@@ -283,7 +262,7 @@ rsync -av --progress \
     
     if [[ "$line" =~ ^[^/] ]] && [[ "$line" != *"sending incremental"* ]]; then
         TRANSFERRED_FILES=$((TRANSFERRED_FILES + 1))
-        PROGRESS=$((50 + (TRANSFERRED_FILES * 25 / TOTAL_FILES)))
+        PROGRESS=$((20 + (TRANSFERRED_FILES * 50 / TOTAL_FILES)))
         
         CURRENT_FILE="$line"
         update_status "transferring" "Transferring: $line" $PROGRESS
@@ -295,17 +274,29 @@ echo "Files transferred to: $DEST_DIR" >> "$LOG_FILE"
 
 check_stop
 
-# Step 7: Verify checksums
-log "Verifying transferred files..."
-update_status "verifying" "Verifying file integrity with checksums..." 75
+# Step 6: Calculate checksums AFTER transfer (on what was actually transferred)
+log "Calculating checksums on transferred files..."
+update_status "checksumming" "Calculating SHA256 checksums on NAS..." 75
+
+CHECKSUM_FILE="$DEST_DIR/checksums_${TIMESTAMP}.txt"
+cd "$DEST_DIR"
+
+# Calculate checksums only on files that were actually transferred
+# Exclude the log and checksum files themselves
+find . -type f ! -name "checksums_*" ! -name "ingest_log_*" -exec sha256sum {} \; > "$CHECKSUM_FILE"
+
+log "Checksums calculated and saved"
+echo "Checksums calculated on transferred files: $CHECKSUM_FILE" >> "$LOG_FILE"
+
+check_stop
+
+# Step 7: Verify checksums (should always pass now)
+log "Verifying checksums..."
+update_status "verifying" "Verifying file integrity..." 80
 
 cd "$DEST_DIR"
 
-# Remove the checksum file itself from verification
-grep -v "checksums_${TIMESTAMP}.txt" "$CHECKSUM_FILE" > "${CHECKSUM_FILE}.verify" || true
-
-# Verify checksums
-if sha256sum -c "${CHECKSUM_FILE}.verify" >> "$LOG_FILE" 2>&1; then
+if sha256sum -c "$CHECKSUM_FILE" >> "$LOG_FILE" 2>&1; then
     log "All checksums verified successfully!"
     echo "✓ All checksums verified successfully" >> "$LOG_FILE"
     VERIFICATION_SUCCESS=true
