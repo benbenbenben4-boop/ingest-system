@@ -59,7 +59,7 @@ apt-get install -y \
     rsync \
     ntfs-3g \
     exfat-fuse \
-    exfat-utils \
+    exfatprogs \
     cifs-utils
 
 echo -e "${GREEN}[2/12]${NC} Creating directory structure..."
