@@ -2,13 +2,17 @@
 # Wrapper script to trigger ingest with proper environment
 # Only triggers if auto-scan is enabled
 
-DEVICE="/dev/$1"
 LOG_FILE="/var/log/ingest/trigger.log"
 AUTO_SCAN_FLAG="/var/run/ingest/auto_scan_enabled"
 
+# Clean device name - remove any tree characters, special symbols, and whitespace
+# This handles cases where device name might have lsblk formatting like └─sda1
+CLEAN_NAME=$(echo "$1" | sed 's/[^a-zA-Z0-9]//g')
+DEVICE="/dev/$CLEAN_NAME"
+
 echo "[$(date)] ========================================" >> "$LOG_FILE"
 echo "[$(date)] USB device detected: $DEVICE" >> "$LOG_FILE"
-echo "[$(date)] Raw parameter: $1" >> "$LOG_FILE"
+echo "[$(date)] Raw parameter: $1 -> cleaned: $CLEAN_NAME" >> "$LOG_FILE"
 
 # Check if device exists
 if [ ! -b "$DEVICE" ]; then
