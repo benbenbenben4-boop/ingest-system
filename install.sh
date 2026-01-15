@@ -155,11 +155,16 @@ echo -e "${GREEN}[8/12]${NC} Creating udev rule for automatic USB detection..."
 cat > /etc/udev/rules.d/99-ingest-usb.rules << 'EOF'
 # Ingest System - Auto-trigger on USB storage devices
 # Triggers when a USB storage partition is added
-ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z][0-9]", ENV{ID_BUS}=="usb", ENV{DEVTYPE}=="partition", RUN+="/usr/local/bin/ingest-trigger.sh %k"
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z][0-9]*", ENV{ID_BUS}=="usb", RUN+="/usr/local/bin/ingest-trigger.sh %k"
 EOF
 
 # Reload udev rules
-udevadm control --reload-rules
+echo "Reloading udev rules..."
+udevadm control --reload-rules 2>/dev/null || echo "udevadm not available"
+
+# Trigger events for already-connected devices
+echo "Triggering events for existing USB devices..."
+udevadm trigger --subsystem-match=block --action=add 2>/dev/null || echo "udevadm trigger not available"
 
 # Step 9: Create systemd service for dashboard
 echo -e "${GREEN}[9/12]${NC} Creating systemd service for dashboard..."

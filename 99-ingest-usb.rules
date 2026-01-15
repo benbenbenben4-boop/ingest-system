@@ -1,0 +1,8 @@
+# Ingest System - Auto-trigger on USB storage devices
+# More permissive rule to catch all USB storage partitions
+
+# Match USB storage devices when partitions are added
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z][0-9]*", ENV{ID_BUS}=="usb", RUN+="/usr/local/bin/ingest-trigger.sh %k"
+
+# Alternative: Match any USB block device (if above doesn't work)
+# ACTION=="add", SUBSYSTEM=="block", ENV{ID_BUS}=="usb", ENV{DEVTYPE}=="partition", RUN+="/usr/local/bin/ingest-trigger.sh %k"

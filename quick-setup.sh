@@ -40,11 +40,12 @@ echo -e "${BLUE}[3/5]${NC} Creating udev rule for USB detection..."
 cat > /etc/udev/rules.d/99-ingest-usb.rules << 'EOF'
 # Ingest System - Auto-trigger on USB storage devices
 # Triggers when a USB storage partition is added
-ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z][0-9]", ENV{ID_BUS}=="usb", ENV{DEVTYPE}=="partition", RUN+="/usr/local/bin/ingest-trigger.sh %k"
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z][0-9]*", ENV{ID_BUS}=="usb", RUN+="/usr/local/bin/ingest-trigger.sh %k"
 EOF
 
 echo -e "${BLUE}[4/5]${NC} Reloading udev rules..."
-udevadm control --reload-rules
+udevadm control --reload-rules 2>/dev/null || echo "udevadm not available"
+udevadm trigger --subsystem-match=block --action=add 2>/dev/null || true
 
 echo -e "${BLUE}[5/5]${NC} Enabling auto-scan..."
 touch /var/run/ingest/auto_scan_enabled
