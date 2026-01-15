@@ -49,7 +49,8 @@ echo ""
 
 # Step 1: Install required packages
 echo -e "${GREEN}[1/12]${NC} Installing required packages..."
-apt-get update -qq
+echo "This may take a few minutes..."
+apt-get update
 apt-get install -y \
     python3-pip \
     python3-flask \
@@ -59,9 +60,7 @@ apt-get install -y \
     ntfs-3g \
     exfat-fuse \
     exfat-utils \
-    cifs-utils \
-    usbmount \
-    > /dev/null 2>&1
+    cifs-utils
 
 echo -e "${GREEN}[2/12]${NC} Creating directory structure..."
 mkdir -p /var/run/ingest
