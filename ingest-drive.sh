@@ -13,6 +13,15 @@ LOG_DIR="/var/log/ingest"
 SYSTEM_LOG="$LOG_DIR/system.log"
 STOP_REQUEST="$STATUS_DIR/stop_request"
 
+# Load config file if exists
+CONFIG_FILE="/etc/ingest/ingest.conf"
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+fi
+
+# Wipe control - set SKIP_WIPE=1 to skip wiping (for testing)
+SKIP_WIPE="${SKIP_WIPE:-0}"
+
 # Colors for logging
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -310,33 +319,80 @@ fi
 check_stop
 
 # Step 8: Wipe the source drive
-log "Wiping source drive..."
-update_status "wiping" "Securely wiping source drive..." 85
+if [ "$SKIP_WIPE" = "1" ]; then
+    log "SKIPPING drive wipe (SKIP_WIPE=1)"
+    echo "⚠ Drive wipe skipped (testing mode)" >> "$LOG_FILE"
+    update_status "wiping" "Skipping wipe (test mode)..." 95
 
-# Unmount before wiping
-cd /
-umount "$MOUNT_POINT"
+    # Unmount the drive
+    cd /
+    umount "$MOUNT_POINT"
 
-# Use dd to wipe the entire device (single-pass overwrite)
-log "Performing single-pass wipe of $DEVICE..."
-dd if=/dev/zero of="$DEVICE" bs=1M status=progress 2>&1 | while read -r line; do
-    check_stop
-    
-    if [[ "$line" =~ ([0-9]+)\ bytes ]]; then
-        WIPED_BYTES="${BASH_REMATCH[1]}"
-        WIPE_PROGRESS=$((85 + (WIPED_BYTES * 14 / DEVICE_SIZE)))
-        if [ "$WIPE_PROGRESS" -gt 99 ]; then
-            WIPE_PROGRESS=99
+elif [ "$SKIP_WIPE" = "2" ]; then
+    log "FAST ERASE mode (SKIP_WIPE=2)"
+    update_status "wiping" "Fast erasing drive..." 85
+
+    # Unmount the drive
+    cd /
+    umount "$MOUNT_POINT"
+
+    # Fast erase: wipe partition table and create new filesystem
+    log "Wiping partition table on $DEVICE_BASE..."
+
+    # Wipe first and last 1MB (destroys partition tables and backup tables)
+    dd if=/dev/zero of="/dev/$DEVICE_BASE" bs=1M count=1 2>/dev/null || true
+    dd if=/dev/zero of="/dev/$DEVICE_BASE" bs=1M seek=$((DEVICE_SIZE / 1024 / 1024 - 1)) count=1 2>/dev/null || true
+
+    # Create new partition table
+    log "Creating new partition table..."
+    parted -s "/dev/$DEVICE_BASE" mklabel msdos
+    parted -s "/dev/$DEVICE_BASE" mkpart primary 1MiB 100%
+
+    # Format with exFAT (cross-platform compatible)
+    log "Formatting with exFAT..."
+    sleep 2  # Wait for partition to appear
+    mkfs.exfat -n "INGESTED" "$DEVICE" 2>/dev/null || mkfs.vfat -n "INGESTED" "$DEVICE"
+
+    sync
+
+    log "Fast erase complete"
+    echo "✓ Drive fast-erased (partition table wiped, reformatted as exFAT)" >> "$LOG_FILE"
+    update_status "wiping" "Fast erase complete" 95
+
+else
+    # Full wipe mode (SKIP_WIPE=0)
+    log "FULL WIPE mode - overwriting entire drive with zeros"
+    log "Device size: ${DEVICE_SIZE_GB}GB - this may take ${DEVICE_SIZE_GB} to $((DEVICE_SIZE_GB * 2)) minutes"
+    update_status "wiping" "Securely wiping source drive... (0%)" 85
+
+    # Unmount before wiping
+    cd /
+    umount "$MOUNT_POINT"
+
+    # Use dd to wipe the entire device (single-pass overwrite)
+    log "Performing single-pass wipe of $DEVICE..."
+    dd if=/dev/zero of="$DEVICE" bs=1M status=progress 2>&1 | while read -r line; do
+        check_stop
+
+        if [[ "$line" =~ ([0-9]+)\ bytes ]]; then
+            WIPED_BYTES="${BASH_REMATCH[1]}"
+            if [ "$DEVICE_SIZE" -gt 0 ]; then
+                WIPE_PROGRESS=$((85 + (WIPED_BYTES * 14 / DEVICE_SIZE)))
+                if [ "$WIPE_PROGRESS" -gt 99 ]; then
+                    WIPE_PROGRESS=99
+                fi
+                WIPED_GB=$((WIPED_BYTES / 1024 / 1024 / 1024))
+                update_status "wiping" "Wiping drive... ${WIPED_GB}GB/${DEVICE_SIZE_GB}GB (${WIPE_PROGRESS}%)" $WIPE_PROGRESS
+            fi
         fi
-        update_status "wiping" "Wiping drive... (${WIPE_PROGRESS}%)" $WIPE_PROGRESS
-    fi
-done 2>/dev/null || true
+    done 2>/dev/null || true
 
-# Sync to ensure all data is written
-sync
+    # Sync to ensure all data is written
+    sync
 
-log "Drive wiped successfully"
-echo "✓ Source drive wiped successfully" >> "$LOG_FILE"
+    log "Drive wiped successfully"
+    echo "✓ Source drive wiped successfully" >> "$LOG_FILE"
+fi
 
 # Step 9: Complete
 log "=========================================="

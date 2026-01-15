@@ -60,7 +60,8 @@ apt-get install -y \
     ntfs-3g \
     exfat-fuse \
     exfatprogs \
-    cifs-utils
+    cifs-utils \
+    parted
 
 echo -e "${GREEN}[2/12]${NC} Creating directory structure..."
 mkdir -p /var/run/ingest
@@ -71,7 +72,7 @@ mkdir -p /etc/ingest
 mkdir -p /opt/ingest-dashboard
 mkdir -p /opt/ingest-dashboard/templates
 
-# Step 3: Install scripts
+# Step 3: Install scripts and config
 echo -e "${GREEN}[3/12]${NC} Installing ingest scripts..."
 cp "$SCRIPT_DIR/ingest-drive.sh" /usr/local/bin/
 cp "$SCRIPT_DIR/ingest-trigger.sh" /usr/local/bin/
@@ -79,6 +80,11 @@ cp "$SCRIPT_DIR/ingest-control.sh" /usr/local/bin/
 chmod +x /usr/local/bin/ingest-drive.sh
 chmod +x /usr/local/bin/ingest-trigger.sh
 chmod +x /usr/local/bin/ingest-control.sh
+
+# Install config file (don't overwrite if exists)
+if [ ! -f /etc/ingest/ingest.conf ]; then
+    cp "$SCRIPT_DIR/ingest.conf" /etc/ingest/
+fi
 
 # Step 4: Install dashboard
 echo -e "${GREEN}[4/12]${NC} Installing dashboard..."
