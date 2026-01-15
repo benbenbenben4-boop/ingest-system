@@ -1,4 +1,25 @@
-# Ingest System V2 - Manual Controls Update
+# Ingest System V2 - Automated USB Drive Ingest System
+
+**Raspberry Pi → NAS Automated Ingest System with Web Dashboard**
+
+Automatically detects USB drives, copies files to your NAS, verifies checksums, and securely wipes the source drive. Features a web dashboard for real-time monitoring and manual controls.
+
+---
+
+## 🚀 Quick Start
+
+```bash
+cd ~/ingest-system
+chmod +x install.sh
+sudo ./install.sh
+```
+
+Then access dashboard at: `http://raspberrypi.local:4666`
+
+**See [QUICKSTART.md](QUICKSTART.md) for a 5-minute guide**
+**See [INSTALL.md](INSTALL.md) for complete installation documentation**
+
+---
 
 ## What's New in V2
 
@@ -25,10 +46,45 @@
 
 ---
 
-## Installation
+## 📋 Features Overview
+
+| Feature | Description |
+|---------|-------------|
+| **Auto-Scan Toggle** | Enable/disable automatic ingesting when drives are plugged in |
+| **Manual Scan** | Select specific drives and start ingesting on demand |
+| **Stop Transfer** | Cancel ongoing transfers at any time (drive won't be wiped) |
+| **Delete Folder** | Remove ingest folders directly from the dashboard |
+| **Real-time Progress** | Live progress tracking with file counts and percentages |
+| **Trash Exclusion** | Automatically skips hidden files, .Trashes, and system folders |
+| **SHA256 Verification** | Checksums calculated and verified before wiping |
+| **Secure Wiping** | Single-pass overwrite with zeros after successful verification |
+| **SD Card Protection** | Refuses to process the Raspberry Pi's SD card |
+| **Web Dashboard** | Modern, responsive UI with authentication |
+
+---
+
+## 💾 Installation
 
 ### For New Installs
-Follow the original README.md instructions from the main ingest-system folder.
+
+Run the automated installer:
+
+```bash
+cd ~/ingest-system
+chmod +x install.sh
+sudo ./install.sh
+```
+
+The installer will:
+- Install all required packages
+- Set up directory structure
+- Configure NAS mounting
+- Create systemd services
+- Set up udev rules for USB detection
+- Create web dashboard with authentication
+- Enable auto-scan by default
+
+**Complete documentation:** [INSTALL.md](INSTALL.md)
 
 ### For Existing Installs (Upgrade from V1)
 
