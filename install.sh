@@ -25,22 +25,46 @@ fi
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Get NAS configuration from user
-echo -e "${BLUE}NAS Configuration${NC}"
-echo "Please provide your NAS details:"
-read -p "NAS IP address or hostname: " NAS_HOST
-read -p "NAS share name (e.g., ingest): " NAS_SHARE
-read -p "NAS username: " NAS_USER
-read -sp "NAS password: " NAS_PASS
-echo ""
-echo ""
+# Check for setup.conf file
+SETUP_CONF="$SCRIPT_DIR/setup.conf"
+if [ -f "$SETUP_CONF" ]; then
+    echo -e "${GREEN}Found setup.conf - loading configuration...${NC}"
+    source "$SETUP_CONF"
 
-# Get dashboard credentials
-echo -e "${BLUE}Dashboard Configuration${NC}"
-read -p "Dashboard username: " DASH_USER
-read -sp "Dashboard password: " DASH_PASS
-echo ""
-echo ""
+    # Validate required fields are filled
+    if [ -z "$NAS_HOST" ] || [ -z "$NAS_SHARE" ] || [ -z "$NAS_USER" ] || [ -z "$NAS_PASS" ] || [ -z "$DASH_USER" ] || [ -z "$DASH_PASS" ]; then
+        echo -e "${RED}Error: setup.conf is incomplete!${NC}"
+        echo "Please fill in all required fields in setup.conf:"
+        echo "  - NAS_HOST, NAS_SHARE, NAS_USER, NAS_PASS"
+        echo "  - DASH_USER, DASH_PASS"
+        exit 1
+    fi
+
+    echo -e "${GREEN}✓ NAS: $NAS_USER@$NAS_HOST/$NAS_SHARE${NC}"
+    echo -e "${GREEN}✓ Dashboard: $DASH_USER${NC}"
+    echo ""
+else
+    echo -e "${YELLOW}No setup.conf found - using interactive mode${NC}"
+    echo -e "${BLUE}Tip: Create setup.conf to skip prompts in future (see setup.conf.example)${NC}"
+    echo ""
+
+    # Get NAS configuration from user
+    echo -e "${BLUE}NAS Configuration${NC}"
+    echo "Please provide your NAS details:"
+    read -p "NAS IP address or hostname: " NAS_HOST
+    read -p "NAS share name (e.g., ingest): " NAS_SHARE
+    read -p "NAS username: " NAS_USER
+    read -sp "NAS password: " NAS_PASS
+    echo ""
+    echo ""
+
+    # Get dashboard credentials
+    echo -e "${BLUE}Dashboard Configuration${NC}"
+    read -p "Dashboard username: " DASH_USER
+    read -sp "Dashboard password: " DASH_PASS
+    echo ""
+    echo ""
+fi
 
 echo "================================================"
 echo "  Starting Installation"
@@ -84,6 +108,12 @@ chmod +x /usr/local/bin/ingest-control.sh
 # Install config file (don't overwrite if exists)
 if [ ! -f /etc/ingest/ingest.conf ]; then
     cp "$SCRIPT_DIR/ingest.conf" /etc/ingest/
+
+    # If WIPE_MODE was set in setup.conf, apply it
+    if [ -n "$WIPE_MODE" ]; then
+        sed -i "s/^SKIP_WIPE=.*/SKIP_WIPE=$WIPE_MODE/" /etc/ingest/ingest.conf
+        echo -e "${GREEN}✓ Wipe mode set to: $WIPE_MODE${NC}"
+    fi
 fi
 
 # Step 4: Install dashboard

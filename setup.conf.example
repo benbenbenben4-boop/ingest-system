@@ -1,0 +1,54 @@
+# Ingest System Setup Configuration
+# Fill out this file before running install.sh to avoid interactive prompts
+# Copy this file: cp setup.conf.example setup.conf
+# Then edit it with your details: nano setup.conf
+
+# ===========================================
+# NAS Configuration
+# ===========================================
+
+# NAS IP address or hostname (e.g., 192.168.1.100 or nas.local)
+NAS_HOST=""
+
+# NAS share name (e.g., ingest, media, backup)
+NAS_SHARE=""
+
+# NAS credentials
+NAS_USER=""
+NAS_PASS=""
+
+# ===========================================
+# Dashboard Configuration
+# ===========================================
+
+# Dashboard web interface credentials
+DASH_USER=""
+DASH_PASS=""
+
+# ===========================================
+# Optional Settings
+# ===========================================
+
+# Dashboard port (default: 4666)
+DASH_PORT="4666"
+
+# Wipe mode (0=full wipe, 1=skip, 2=fast erase)
+# Default is 2 (fast erase - recommended)
+WIPE_MODE="2"
+
+# ===========================================
+# Instructions
+# ===========================================
+# 1. Copy this file: cp setup.conf.example setup.conf
+# 2. Edit with your details: nano setup.conf
+# 3. Fill in NAS_HOST, NAS_SHARE, NAS_USER, NAS_PASS
+# 4. Fill in DASH_USER and DASH_PASS
+# 5. Save and run: sudo ./install.sh
+#
+# The installer will read from this file instead of prompting!
+#
+# Security Note:
+# - This file contains passwords in plain text
+# - Keep it secure with: chmod 600 setup.conf
+# - Don't commit it to git (already in .gitignore)
+# - Delete after installation if desired

@@ -2,7 +2,27 @@
 
 Get your ingest system up and running in 5 minutes!
 
-## Installation (One Command)
+## Installation (Choose One)
+
+### Option A: With Setup File (Recommended)
+
+No repeated prompts - configure once, use forever!
+
+```bash
+cd ~/ingest-system
+
+# Create setup file
+cp setup.conf.example setup.conf
+nano setup.conf  # Fill in your NAS and dashboard details
+chmod 600 setup.conf
+
+# Install automatically
+sudo ./install.sh
+```
+
+### Option B: Interactive Install
+
+Answer prompts during installation:
 
 ```bash
 cd ~/ingest-system
